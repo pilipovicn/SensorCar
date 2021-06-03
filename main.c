@@ -78,11 +78,11 @@ int main(){
     while(1){
         
         // Odrzavaj distancu sa zidom izmedju 4 i 6 cm
-        if(distSD < 4 && distFW > 11.5){
+        if(distSD < 4){
             FORWARD_MOVE(); // blago micanje napred pri svakom skretanju, da ne bi bilo ostro, *ispostvalja se da je prekratko pa druga gusenica samo miruje, ali i to je u redu.
             __delay_ms(30);
             LEFT_TURN();
-        }else if(distSD > 6 && distFW > 11.5){
+        }else if(distSD > 6){
             FORWARD_MOVE();
             __delay_ms(30);
             RIGHT_TURN();
@@ -100,7 +100,7 @@ int main(){
             }
         }
         
-        //sprintf(message, "Dist FW: %.1f | Dist SD: %.1f \n\r", distFW, distSD);
+        sprintf(message, "Dist FW: %.1f | Dist SD: %.1f \n\r", distFW, distSD);
         RS232_putst(message);
     }
 
