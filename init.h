@@ -12,27 +12,17 @@
 #include <stdlib.h>
 #include <libpic30.h>
 
-
-// ******************************************************************************************* //
-// Defines to simply UART's baud rate generator (BRG) regiser
-// given the osicllator freqeuncy and PLLMODE.
-
-
 #define TRIG_FW LATDbits.LATD3
 #define TRIG_SD LATDbits.LATD2
 #define ECHO_FW PORTDbits.RD8
 #define ECHO_SD PORTDbits.RD9
-
-
-//#define DELAY_105us asm volatile ("REPEAT, #3869"); Nop(); // 105uS delay
 
 void init_pins();
 void InitUART1();
 void InitTimer1();
 void InitTimer2();
 void InitTimer3();
-void InitTimer4();
-void InitHC_SR04();
+void Init_IC();
 
 
 

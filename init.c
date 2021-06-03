@@ -52,92 +52,49 @@ void InitTimer2() {
 
 void InitTimer3() {
 
-    //Use internal Fcy (10 MHz)
+    //interni Fcy (10 MHz)
     T3CONbits.TCS = 0;
 
-   
-    //10 counts for 1us
-    T3CONbits.TCKPS = 2; // ^-- not
+    T3CONbits.TCKPS = 2; // Preskaler 1:64 daje korak brojanja 0.0000064 sekundi
 
-    //Turning it on
+    //Ukljuci tajmer
     T3CONbits.TON = 1;
 }
 
-void InitTimer4(){
-    	TMR4 = 0;
-        
-	T4CONbits.TCS = 0; //source is Fcy
-	T4CONbits.TCKPS = 3; //1:512
-        //Set PR1 to 60ms
-	//PR1 = 37500;
-    PR4 = 20000;
-    
-    //IFS0bits.T4IF = 0;
+void Init_IC() {
 
-	// Enable the interrupt for Timer 1
-	//IEC0bits.T4IE = 1;
-    
-}
-
-void InitHC_SR04() {
-
-    //Pin 16 (RP7) and Pin 15 (RP6) are required for this sensor
-    //because they are 5V tolerant
-
-    //Using RP7 for trigger (output)
+    //Postavi triggere na output i stavi na 0
     TRISDbits.TRISD3 = 0;
     TRISDbits.TRISD2 = 0;
-    //configure for open-drain to allow 5V on pin
-    //ODCBbits.ODCB7 = 1;
 
-    //open drain pins are low when the output is set high
     LATDbits.LATD3 = 0;
     LATDbits.LATD2 = 0;
 
-
-
-    //Using RP6 as echo (input)
+    //Postavi echo pinove kao input
     TRISDbits.TRISD8 = 1;
     TRISDbits.TRISD9 = 1;
-    //Map IC1 to RP6
-    //RPINR7bits.IC1R = 6;
-    //Interrupt on every 2nd event
-    //According to the sensor datasheet the echo pin will only go high
-    //after the trigger has been set. So the 2nd event should always be
-    //the falling edge
-    //IC1CONbits.ICI = 1;
-
     
-    
-    //setting up timer2
+    //Input control 1 podesavanja
     IC1CONbits.ICTMR = 0;
     
-    //Capture events on rising & falling edge
+    //Hvataj i uzlaznu i silaznu ivicu
     IC1CONbits.ICM = 1;
 
-    //Setup the IC1 interrupt
-    //Set priority level (need to check doc for this) This line is straight
-    //from the example in ref manual
+    //Interrupt za IC
     IPC0bits.IC1IP = 1;
-    //Clear IF
+
     IFS0bits.IC1IF = 0;
-    //Enable IC1 interrupt
+ 
     IEC0bits.IC1IE = 1;
     
     
     IC2CONbits.ICTMR = 0;
     
-    //Capture events on rising & falling edge
+    //Input control 2 podesavanja
     IC2CONbits.ICM = 1;
 
-    //Setup the IC1 interrupt
-    //Set priority level (need to check doc for this) This line is straight
-    //from the example in ref manual
-    //IPC0bits.IC2IP = 1;
-    //Clear IF
+    //Interrput za IC2
     IFS0bits.IC2IF = 0;
-    //Enable IC1 interrupt
-    IEC0bits.IC2IE = 1;
-    
 
+    IEC0bits.IC2IE = 1;
 }

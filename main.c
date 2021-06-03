@@ -1,4 +1,5 @@
-//main.c
+//AUTHOR: Grupa 7
+
 // FOSC
 #pragma config FOSFPR = XT_PLL4         // Oscillator (XT w/PLL 4x)
 #pragma config FCKSMEN = CSW_FSCM_OFF   // Clock Switching and Monitor (Sw Disabled, Mon Disabled)
@@ -42,66 +43,81 @@ int t3=0, t4=0;
 volatile float distFW, distSD;
 int timeFW=0, timeSD;
 char message[100];
-char test[100];
-int next_frame = 1;
-int fw_thr = 8;
-int sd_thr = 7;
-int readyFW = 0;
-int readySD = 0;
 
+
+
+
+// Metoda za skretanje, skrece samo desnom gusenicom kako bi povecao radijus skretanja i priblizio senzor zidu
+// Nakon samog skretanja pomera se blago napred, ponovo zbog priblizavanja senzora zidu. Sto je senzor dalje od zida, akt odrzavanja distance (iz maina) moze da 
+// nacini previliki ugao sa senzorom sto ce pokvariti korektna ocitavanja.
 void turn_manuevre(){
     LEFT_TURN_GYRATE();
-    __delay_ms(2100);
+    __delay_ms(2160);
     FORWARD_MOVE();
     __delay_ms(600);
     STOP_MOVE();
-    
+    //ok
 }
 
 int main(){
+    // Inicijalizacija pinova
     init_pins();
+    // Inicijalizacija tajmera 3, koji je bazni tajmer za input capture 1 i 2
     InitTimer3();
+    // Inicijalizacija tajmera 1, kojim se odbrojava preporucenih 60ms periode slanja triggera
     InitTimer1();
+    // Inicijalizacija tajmera 2, sluzi samo za PWM, analogni izlaz od 2V za motor, kako ne bi isao prebrzo (5V)
     InitTimer2();
+    // Inicijalizacija UART1 modula, vezan za bluetooth
     InitUART1();
-    InitHC_SR04();
+    // Inicijalizacija Input Capture modula za senzor 1 i 2
+    Init_IC();
+    // Start tajmer 1
     T1CONbits.TON = 1;
     
     while(1){
-        //trigger_distance();
-        //while(!readyFW && !readySD);
-        if(distSD < 4){
-            FORWARD_MOVE();
+        
+        // Odrzavaj distancu sa zidom izmedju 4 i 6 cm
+        if(distSD < 4 && distFW > 11.5){
+            FORWARD_MOVE(); // blago micanje napred pri svakom skretanju, da ne bi bilo ostro, *ispostvalja se da je prekratko pa druga gusenica samo miruje, ali i to je u redu.
             __delay_ms(30);
             LEFT_TURN();
-        }else if(distSD > 6){
+        }else if(distSD > 6 && distFW > 11.5){
             FORWARD_MOVE();
             __delay_ms(30);
             RIGHT_TURN();
+            RS232_putst("Skrecem prema desno!\n\r");
         }else{
+            // Ako je ili distanca u opsegu 4-6cm, idi napred
             if(distFW > 11.5){
-                
+                RS232_putst("Idem pravo!\n\r");
                 FORWARD_MOVE();
             }else{
-                
+            // A ako je prepreka ispred, tj. napred distanca manja od 11.5, pokreni manevar za skretanje levo.
+                RS232_putst("Skrecem levo!");
                 turn_manuevre();
                
             }
         }
         
-        sprintf(message, "Dist FW: %.1f | Dist SD: %.1f \n\r", distFW, distSD);
+        //sprintf(message, "Dist FW: %.1f | Dist SD: %.1f \n\r", distFW, distSD);
         RS232_putst(message);
-        
     }
 
     return 1;
 }
 
+// Ne koristi se
 void __attribute__((__interrupt__, no_auto_psv)) _U1RXInterrupt(void){
 	// Clear interrupt flag
 	IFS0bits.U1RXIF = 0;
 }
 
+// IC1 Interrupt se podize na svakoj ivice ECHO signala prvog senzora. Unutra se desava:
+// proverava se da li je ivica uzlazna(prvi interrupt) ili silazna (drugi interrupt)
+// Ako je uzlazna, zapamti trenutak (vrednost tajmera t1)
+// Ako je silazna, zapamti trenutak, i oduzmi od njega prethodni trenutak uzlazne ivice. Dobijamo trajanje visokog signala echo.
+// U slucaju overflowa (iako se to ne bi trebalo dogoditi, ali za velike udaljenosti merenja mozda i moze), koristi se druga formula za racunanje duzine (if t2<t1)
 void __attribute__((__interrupt__, no_auto_psv)) _IC1Interrupt(void){
     if(!falling_edgeFW){
         t1 = IC1BUF;
@@ -109,21 +125,24 @@ void __attribute__((__interrupt__, no_auto_psv)) _IC1Interrupt(void){
     }else{
         t2 = IC1BUF;
         falling_edgeFW = 0;
-        readyFW = 1;
-        //sprintf(test, "t1: %X | t2: %X\n", t1, t2);
-        //RS232_putst(test);
+        
         if(t2>t1){
             timeFW = t2 - t1;
         }else{
             timeFW = (0xFFFF - t1)+t2;
         }
-        distFW = (34300 * 0.0000064 * timeFW)/2;
+        distFW = (34300 * 0.0000064 * timeFW)/2; // T3 korak brojanja je 0.0000064 sekundi, pogledati init.c. 343*100 m/s = 34300 cm/s
         
     }
 
     IFS0bits.IC1IF = 0;
 }
 
+// IC1 Interrupt se podize na svakoj ivice ECHO signala drugog senzora. Unutra se desava:
+// proverava se da li je ivica uzlazna(prvi interrupt) ili silazna (drugi interrupt)
+// Ako je uzlazna, zapamti trenutak (vrednost tajmera t1)
+// Ako je silazna, zapamti trenutak, i oduzmi od njega prethodni trenutak uzlazne ivice. Dobijamo trajanje visokog signala echo.
+// U slucaju overflowa (iako se to ne bi trebalo dogoditi, ali za velike udaljenosti merenja mozda i moze), koristi se druga formula za racunanje duzine (if t2<t1)
 void __attribute__((__interrupt__, no_auto_psv)) _IC2Interrupt(void){
       if(!falling_edgeSD){
         t3 = IC2BUF;
@@ -131,18 +150,20 @@ void __attribute__((__interrupt__, no_auto_psv)) _IC2Interrupt(void){
     }else{
         t4 = IC2BUF;
         falling_edgeSD = 0;
-        readySD = 1;
+        
         if(t4>t3){
             timeSD = t4 - t3;
         }else{
             timeSD = (0xFFFF - t3) + t4;
         }
-        distSD = (34300 * 0.0000064 * timeSD)/2;
+        distSD = (34300 * 0.0000064 * timeSD)/2; // T3 korak brojanja je 0.0000064 sekundi, pogledati init.c. 343*100 m/s = 34300 cm/s
     }
 
     IFS0bits.IC2IF = 0;
 }
 
+// Interrupt tajmera 1 se dize svakih 60ms. U njemu se okida trigger oba senzora, u trajanju od 3*6.4us (TMR1 korak je 6.4us). 60ms po preporuci datasheeta. Trigger
+// potrebno drzati visokim bar 10us, ovde je 19.2us
 void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void){
     TRIG_FW = 1;
     TRIG_SD = 1;
@@ -154,7 +175,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void){
 	IFS0bits.T1IF = 0;   
 }
 
-
+// Ne koristi se
 void __attribute__((__interrupt__)) _T2Interrupt(void){
    	TMR2 = 0;
     IFS0bits.T2IF = 0;
