@@ -22,7 +22,7 @@
 // FICD
 #pragma config ICS = ICS_PGD            // Comm Channel Select (Use PGC/EMUC and PGD/EMUD)
 
-#include <xc.h>
+#include </mnt/ArchData/microchip/xc16/v1.70/support/generic/h/xc.h>
 #include "init.h"
 #include "uart.h"
 #include <math.h>
@@ -41,7 +41,7 @@ int t1=0;
 int t2=0;
 int t3=0, t4=0;
 volatile float distFW, distSD;
-int timeFW=0, timeSD;
+int timeFW=0, timeSD=0;
 char message[100];
 
 
@@ -56,7 +56,6 @@ void turn_manuevre(){
     FORWARD_MOVE();
     __delay_ms(600);
     STOP_MOVE();
-    //ok
 }
 
 int main(){
@@ -76,15 +75,14 @@ int main(){
     T1CONbits.TON = 1;
     
     while(1){
-        
         // Odrzavaj distancu sa zidom izmedju 4 i 6 cm
         if(distSD < 4){
             FORWARD_MOVE(); // blago micanje napred pri svakom skretanju, da ne bi bilo ostro, *ispostvalja se da je prekratko pa druga gusenica samo miruje, ali i to je u redu.
             __delay_ms(30);
             LEFT_TURN();
-        }else if(distSD > 6){
-            FORWARD_MOVE();
-            __delay_ms(30);
+        }else if(distSD > 6){//       x x x x  
+            FORWARD_MOVE(); //       |^^^^^^^
+            __delay_ms(30);//        |
             RIGHT_TURN();
             RS232_putst("Skrecem prema desno!\n\r");
         }else{
@@ -96,7 +94,6 @@ int main(){
             // A ako je prepreka ispred, tj. napred distanca manja od 11.5, pokreni manevar za skretanje levo.
                 RS232_putst("Skrecem levo!");
                 turn_manuevre();
-               
             }
         }
         
@@ -104,7 +101,7 @@ int main(){
         RS232_putst(message);
     }
 
-    return 1;
+    return 0;
 }
 
 // Ne koristi se
@@ -124,8 +121,8 @@ void __attribute__((__interrupt__, no_auto_psv)) _IC1Interrupt(void){
         falling_edgeFW = 1;
     }else{
         t2 = IC1BUF;
-        falling_edgeFW = 0;
-        
+        falling_edgeFW = 0; ///   0-99:  0,1,2,3<-t1,4,5,6,7,8,9<-t2 , timeFW=9-3
+                            ///          0,1,2,3,...96,97<-t1,98,99,0,1,2,3,4<-t2 99-97=2+4=6
         if(t2>t1){
             timeFW = t2 - t1;
         }else{
@@ -172,7 +169,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void){
     TRIG_FW = 0;
     TRIG_SD = 0;
     
-	IFS0bits.T1IF = 0;   
+	IFS0bits.T1IF = 0; 
 }
 
 // Ne koristi se

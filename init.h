@@ -7,10 +7,10 @@
 #define FPWM		9600
 #define BAUDRATE         ((FCY/FPWM)/16)-1
 
-#include <p30Fxxxx.h>
+#include </mnt/ArchData/microchip/xc16/v1.70/support/dsPIC30F/h/p30Fxxxx.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <libpic30.h>
+#include </mnt/ArchData/microchip/xc16/v1.70/support/generic/h/libpic30.h>
 
 #define TRIG_FW LATDbits.LATD3
 #define TRIG_SD LATDbits.LATD2
